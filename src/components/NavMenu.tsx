@@ -38,7 +38,7 @@ function Logo() {
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 36 36"
-      style={{ marginRight: "10px" }}
+      style={{ marginRight: "10px", width: "100px", height: "100px" }}
     >
       <path
         fill="#31373D"
