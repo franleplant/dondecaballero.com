@@ -1,0 +1,54 @@
+module.exports = {
+  root: true,
+  parser: "@typescript-eslint/parser",
+  plugins: ["@typescript-eslint", "react-hooks"],
+  env: {
+    browser: true,
+    node: true,
+    mocha: true,
+  },
+
+  extends: [
+    "eslint:recommended",
+    "plugin:react/recommended",
+    "plugin:@typescript-eslint/eslint-recommended",
+    "plugin:@typescript-eslint/recommended",
+    "prettier/@typescript-eslint",
+  ],
+
+  rules: {
+    "react/display-name": "off",
+    "@typescript-eslint/triple-slash-reference": "off",
+    "@typescript-eslint/explicit-function-return-type": "off",
+    "@typescript-eslint/interface-name-prefix": [2, "always"],
+    "@typescript-eslint/no-empty-interface": "off",
+    "@typescript-eslint/no-explicit-any": 1,
+    "@typescript-eslint/no-var-requires": "off",
+    "@typescript-eslint/camelcase": [
+      2,
+      { properties: "never", ignoreDestructuring: true },
+    ],
+    "@typescript-eslint/no-use-before-define": [
+      "error",
+      { functions: false, classes: false, variables: false },
+    ],
+    // note you must disable the base rule as it can report incorrect errors
+    "no-unused-vars": "off",
+    "react-hooks/rules-of-hooks": "error",
+    "react-hooks/exhaustive-deps": "error",
+  },
+  overrides: [
+    {
+      files: ["*.tsx?"],
+      rules: {
+        "@typescript-eslint/no-var-requires": "error",
+      },
+    },
+  ],
+
+  settings: {
+    react: {
+      version: "detect",
+    },
+  },
+};

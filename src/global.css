@@ -1,0 +1,126 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-pageBg;
+  }
+
+  small,
+  summary,
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h1 {
+    @apply text-4xl;
+    @apply font-sans;
+    @apply font-bold;
+    @apply pb-2;
+  }
+  h2 {
+    @apply text-2xl;
+    @apply font-sans;
+    @apply font-bold;
+    @apply pb-2;
+  }
+  h3 {
+    @apply text-xl;
+    @apply font-sans;
+    @apply font-bold;
+    @apply pb-2;
+  }
+
+  h4 {
+    @apply text-lg;
+    @apply font-sans;
+    @apply font-bold;
+    @apply pb-2;
+  }
+
+  h5 {
+    @apply text-base;
+    @apply font-sans;
+    @apply font-bold;
+    @apply pb-2;
+  }
+
+  h6 {
+    @apply text-base;
+    @apply font-sans;
+    @apply font-bold;
+    @apply italic;
+    @apply pb-2;
+  }
+
+  a {
+    @apply text-primary;
+    @apply hover:underline;
+    @apply font-bold;
+  }
+
+  blockquote {
+    @apply rounded-md p-6 pl-8 italic;
+    @apply border-l-8 border-secondary bg-gray-50;
+  }
+
+  blockquote * {
+    @apply text-lg;
+  }
+
+  ul {
+    @apply list-disc;
+    @apply pl-8;
+  }
+
+  ol {
+    @apply list-decimal;
+    @apply pl-8;
+  }
+
+  li {
+    @apply py-1;
+  }
+}
+
+.card-subheading-info {
+  @apply font-mono;
+}
+
+.gatsby-highlight,
+.gatsby-code-title {
+  @apply -m-3;
+}
+
+.gatsby-code-title + .gatsby-highlight {
+  margin-top: -0.5rem !important;
+}
+
+.gatsby-code-title {
+  @apply rounded-t-md;
+  @apply text-white;
+  @apply bg-black;
+  @apply font-mono;
+  @apply p-3;
+}
+
+/* Markdown title permalinks */
+.header-anchor {
+  @apply invisible;
+}
+
+h1:hover > a.header-anchor,
+h2:hover > a.header-anchor,
+h3:hover > a.header-anchor,
+h4:hover > a.header-anchor,
+h5:hover > a.header-anchor,
+h6:hover > a.header-anchor {
+  @apply visible transition-all delay-75;
+}
+
+/* this is to fix overflowing in mobile */
+:not(pre) > code[class*="language-"] {
+  word-break: break-word;
+}
