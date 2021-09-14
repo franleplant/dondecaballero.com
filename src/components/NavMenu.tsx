@@ -17,7 +17,7 @@ export default function NavMenu(): JSX.Element {
           to="/about"
           className="flex-1 leading-10 md:p-2 text-md hover:text-opacity-80 flex-grow-0 mx-auto"
         >
-          About
+          Acerca
         </Link>
         {/* <a
           href={`mailto:nosleeptechblog@gmail.com?subject=Contact from website`}
