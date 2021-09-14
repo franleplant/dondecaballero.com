@@ -72,7 +72,9 @@ export default function SEO(props: IProps) {
         },
       ].concat(meta)}
     >
+      {/*
       <MailchimpScript />
+        */}
     </Helmet>
   );
 }

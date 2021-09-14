@@ -19,6 +19,7 @@
     @apply font-sans;
     @apply font-bold;
     @apply pb-2;
+    @apply text-black;
   }
   h2 {
     @apply text-2xl;
@@ -60,6 +61,16 @@
     @apply hover:underline;
     @apply font-bold;
   }
+
+  /*h1 > a,*/
+  /*h2 > a,*/
+  /*h3 > a,*/
+  /*h4 > a,*/
+  /*h5 > a,*/
+  /*h6 > a,*/
+  /*{*/
+    /*@apply text-black !important;*/
+  /*}*/
 
   blockquote {
     @apply rounded-md p-6 pl-8 italic;

@@ -26,7 +26,7 @@ export default function PostCard(props: IProps): JSX.Element {
       onClick={onClick}
       className={oneline`
         bg-postBg p-3 rounded-md
-        border-b border-l border-gray-200 cursor-pointer 
+        cursor-pointer 
         flex flex-col
         space-y-1
         sm:w-3/4

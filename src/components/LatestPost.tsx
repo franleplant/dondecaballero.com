@@ -21,7 +21,7 @@ const LatestPost = (props: IProps) => {
 
   return (
     <div
-      className="w-full sm:min-h-250 lg:w-1/3 bg-latestPostBg p-2 rounded-md shadow-sm flex flex-col px-4 justify-between"
+      className="w-full sm:min-h-250 lg:w-1/3 bg-latestPostBg p-2 rounded-md flex flex-col px-4 justify-between"
       onClick={onClick}
     >
       <div>

@@ -1,10 +1,10 @@
 module.exports = {
   pathPrefix: "/",
   siteMetadata: {
-    title: `Randomleplants`,
-    author: `franleplant`,
-    description: `A blog by franleplant about ...`,
-    siteUrl: `https://randomleplants`,
+    title: `Don de Caballero`,
+    author: `team`,
+    description: `Estilo para caballeros`,
+    siteUrl: `https://dondecaballero.com`,
   },
   plugins: [
     {
@@ -127,15 +127,15 @@ module.exports = {
       },
     },
     // Slowing down development
-    {
-      resolve: `gatsby-plugin-graphql-codegen`,
-      options: {
-        codegenConfig: {
-          typesPrefix: "I",
-          avoidOptionals: true,
-        },
-      },
-    },
+    //{
+    //resolve: `gatsby-plugin-graphql-codegen`,
+    //options: {
+    //codegenConfig: {
+    //typesPrefix: "I",
+    //avoidOptionals: true,
+    //},
+    //},
+    //},
 
     {
       resolve: `gatsby-plugin-google-adsense`,

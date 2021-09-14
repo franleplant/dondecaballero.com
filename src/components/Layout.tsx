@@ -31,7 +31,7 @@ export default function Layout(props: IProps) {
         <main>{children}</main>
       </div>
       <footer className="p-3 text-center mt-auto hidden md:block">
-        © {new Date().getFullYear()}, randomleplants.com
+        © {new Date().getFullYear()}, dondecaballero.com
       </footer>
     </div>
   );
