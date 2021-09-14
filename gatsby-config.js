@@ -99,7 +99,7 @@ module.exports = {
     {
       resolve: `gatsby-plugin-google-analytics`,
       options: {
-        trackingId: `UA-207018451-1`,
+        trackingId: `UA-207539500-1`,
       },
     },
     `gatsby-plugin-feed`,
@@ -127,22 +127,22 @@ module.exports = {
       },
     },
     // Slowing down development
-    //{
-    //resolve: `gatsby-plugin-graphql-codegen`,
-    //options: {
-    //codegenConfig: {
-    //typesPrefix: "I",
-    //avoidOptionals: true,
-    //},
-    //},
-    //},
-
     {
-      resolve: `gatsby-plugin-google-adsense`,
+      resolve: `gatsby-plugin-graphql-codegen`,
       options: {
-        publisherId: `ca-pub-2006751746052752`,
+        codegenConfig: {
+          typesPrefix: "I",
+          avoidOptionals: true,
+        },
       },
     },
+
+    //{
+    //resolve: `gatsby-plugin-google-adsense`,
+    //options: {
+    //publisherId: `ca-pub-2006751746052752`,
+    //},
+    //},
     `gatsby-plugin-twitter`,
     "gatsby-plugin-postcss",
   ],
