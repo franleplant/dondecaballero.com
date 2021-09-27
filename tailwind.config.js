@@ -24,8 +24,8 @@ module.exports = {
         tagBg: "#FFF",
       },
       fontFamily: {
-        sans: ['Montserrat', 'sans-serif'],
-        title: ['Fjalla One', 'sans-serif']
+        sans: ["Montserrat", "sans-serif"],
+        title: ["Fjalla One", "sans-serif"],
       },
     },
   },

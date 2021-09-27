@@ -6,9 +6,16 @@ export default function NavMenu(): JSX.Element {
   return (
     <div className="p-4 sm:p-2 lg:px-2 lg:py-0 flex flex-col mx-auto sm:w-5/6 justify-between">
       <h1 className="md:mx-auto sm:w-3/4 w-full max-w-screen-xl mt-1 sm:mt-3 flex py-3">
-        <Link to={`/`} className="grid mx-auto !no-underline justify-items-center">
+        <Link
+          to={`/`}
+          className="grid mx-auto !no-underline justify-items-center"
+        >
           <h1>DON DE CABALLERO</h1>
-          <img src={logo} alt={"Don De Caballero"} style={{ width: "100px", height: "100px" }}/>
+          <img
+            src={logo}
+            alt={"Don De Caballero"}
+            style={{ width: "100px", height: "100px" }}
+          />
         </Link>
       </h1>
 
