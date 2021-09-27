@@ -3,7 +3,6 @@ import { graphql, PageProps } from "gatsby";
 
 import Layout from "../components/Layout";
 import SEO from "../components/Seo";
-import LatestPost from "../components/LatestPost";
 
 import { IBlogIndexQuery } from "../../graphql-types";
 import PostCard from "../components/PostCard";
