@@ -17,7 +17,7 @@ export default function SEO(props: IProps) {
   const siteMeta = useSiteMetadata();
   const assets = useAssets();
 
-  const logo = assets.find((asset) => asset.base.includes("logo.svg"));
+  const logo = assets.find((asset) => asset.base.includes("moustache-logo.svg"));
 
   const metaDescription = description || siteMeta.description;
 

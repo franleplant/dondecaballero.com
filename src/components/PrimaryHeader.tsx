@@ -2,7 +2,7 @@ import React from "react";
 import { Link } from "gatsby";
 import { useFranleplant } from "../dal/authors";
 
-import logo from "../../content/assets/logo.svg";
+import logo from "../../content/assets/moustache-logo.svg";
 import { oneline } from "../utils/strTag";
 
 export interface IProps {
