@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "gatsby";
 
-import logo from "../../content/assets/logo.svg";
+import logo from "../../content/assets/moustache-logo.svg";
 import logoInverted from "../../content/assets/logo_inverted.svg";
 
 export interface IProps {}

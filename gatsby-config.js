@@ -112,7 +112,7 @@ module.exports = {
         background_color: `#ffffff`,
         theme_color: `#663399`,
         display: `minimal-ui`,
-        icon: `content/assets/logo.svg`,
+        icon: `content/assets/moustache-logo.svg`,
       },
     },
     `gatsby-plugin-offline`,
@@ -145,6 +145,14 @@ module.exports = {
     //},
     `gatsby-plugin-twitter`,
     "gatsby-plugin-postcss",
+    {
+      resolve: "gatsby-plugin-web-font-loader",
+      options: {
+        google: {
+          families: ["Fjalla One", "Montserrat"],
+        },
+      },
+    },
   ],
   mapping: {
     "MarkdownRemark.frontmatter.author": `AuthorYaml`,

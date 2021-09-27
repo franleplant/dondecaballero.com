@@ -40,7 +40,7 @@ export default function PostCard(props: IProps): JSX.Element {
           <Link to={slug}>{title}</Link>
         </h3>
         <div className="p-1 text-sm card-subheading-info">
-          <div>
+          <div className="font-sans">
             {`${date} | ${readingTime}`}
             {` | by `}
             <span className="font-bold text-secondary text-sm">{authorId}</span>
