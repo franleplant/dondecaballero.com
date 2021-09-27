@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Don de Caballero]]></title><description><![CDATA[Estilo para caballeros]]></description><link>https://dondecaballero.com</link><generator>GatsbyJS</generator><lastBuildDate>Mon, 27 Sep 2021 23:46:36 GMT</lastBuildDate><item><title><![CDATA[Rock-paper-scissors game built in Cardano smart contracts]]></title><description><![CDATA[I’ve taken part of the second cohort of the Plutus Pioneer Program where one can
+learn how to write Smart Contracts in Cardano by using…]]></description><link>https://dondecaballero.com/cardano-smart-contract-game/</link><guid isPermaLink="false">https://dondecaballero.com/cardano-smart-contract-game/</guid><pubDate>Tue, 10 Aug 2021 00:00:00 GMT</pubDate><content:encoded>&lt;p&gt;I’ve taken part of the second cohort of the &lt;a href=&quot;https://testnets.cardano.org/en/plutus-pioneer-program/&quot;&gt;Plutus Pioneer Program&lt;/a&gt; where one can
+learn how to write Smart Contracts in &lt;a href=&quot;https://cardano.org/&quot;&gt;Cardano&lt;/a&gt; by using &lt;a href=&quot;https://github.com/input-output-hk/plutus&quot;&gt;Plutus&lt;/a&gt;, set for main chain release in late 2021.&lt;/p&gt;
+&lt;p&gt;Cardano’s version of Smart Contract is pretty “weird” coming from &lt;a href=&quot;https://ethereum.org/en/&quot;&gt;Ethereum&lt;/a&gt;,
+and I plan to write about it later but it does provide some interesting abstractions that let
+you express common patterns rather easily, in particular we are going to be covering
+how you can model your DApp as a state machine and how can you express said model in Plutus
+pretty easily.&lt;/p&gt;
+&lt;p&gt;Cardano’s Smart Contracts are written in a Haskell library called Plutus, so put up your
+functional programming hat and let’s get our hands dirty.&lt;/p&gt;
+&lt;p&gt;Note: at the time of writing there still some wrinkles in Cardano’s smart contract platform, so
+if you are not part of the Plutus Pioneer Program you might have some difficulties running the code,
+but hopefully it will be a nice showcase of how Cardano enables smart contracts.
+Also, State Machines are just a higher level abstraction to write smart contracts in Cardano but
+not at all the only way, so you are not limited to them.&lt;/p&gt;
+&lt;h2 id=&quot;quick-intro-to-plutus-concepts&quot; style=&quot;position:relative;&quot;&gt;Quick intro to Plutus Concepts&lt;a href=&quot;#quick-intro-to-plutus-concepts&quot; aria-label=&quot;quick intro to plutus concepts permalink&quot; class=&quot;header-anchor after&quot;&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Plutus smart contracts should be called &lt;strong&gt;Smart Transactions&lt;/strong&gt; because that is all you can really do &lt;em&gt;on-chain&lt;/em&gt;.&lt;/p&gt;
+&lt;p&gt;From the outside, users can only generate &lt;strong&gt;Transactions&lt;/strong&gt; with inputs (UTxOs or unspent transaction outputs of previous
+transactions) and generate outputs (also UTxOs) at different public key addresses depending on the use case.&lt;/p&gt;
+&lt;p&gt;These transactions are created &lt;em&gt;off-chain&lt;/em&gt; and sent along with a trivial payload
+called the &lt;strong&gt;Redeemer&lt;/strong&gt;.&lt;/p&gt;
+&lt;p&gt;A transaction is only applied to the blockchain after being &lt;em&gt;validated&lt;/em&gt; by &lt;strong&gt;Validator script&lt;/strong&gt;
+which is the main thing DApp developers write and run &lt;em&gt;on-chain&lt;/em&gt;.&lt;/p&gt;
+&lt;p&gt;This validator script has a public key address made up of its hash and
+funds (UTxOs) can only be spent if the transaction trying to spend them
+passes the validation, which is the business logic running &lt;em&gt;on-chain&lt;/em&gt;.&lt;/p&gt;
+&lt;p&gt;A UTxO contains coins or Native Tokens plus a trivial custom payload called the &lt;code class=&quot;language-text&quot;&gt;Datum&lt;/code&gt;,
+which serves as a custom application state and is central to the ability to write DApps.&lt;/p&gt;
+&lt;p&gt;The main difference between user accounts and script accounts is that
+user accounts need to sign spending transactions with their private key but
+anyone can spend from a script address if the transaction is considered valid by the
+validator script itself. Is a pretty interesting model.&lt;/p&gt;
+&lt;p&gt;All this is part of the EUTxO model or the Extended Unspect Transaction Output which is
+the model pioneered by Bitcoin with some extensions to allow &lt;em&gt;smart contracts&lt;/em&gt;.&lt;/p&gt;
+&lt;p&gt;Surprisingly this model allows pretty much all what you would expect from a smart contract platform, it is just modeled
+differently and does comes with trade-offs. It is similar to what &lt;code class=&quot;language-text&quot;&gt;functional programming&lt;/code&gt; brings to the table in terms
+of predictability, testability and simpler interfaces comparing it to imperative or object oriented programming,
+so we could say that &lt;strong&gt;Cardano is a platform for pure functional smart contracts&lt;/strong&gt;.&lt;/p&gt;
+&lt;h2 id=&quot;rock-paper-scissors&quot; style=&quot;position:relative;&quot;&gt;Rock Paper Scissors&lt;a href=&quot;#rock-paper-scissors&quot; aria-label=&quot;rock paper scissors permalink&quot; class=&quot;header-anchor after&quot;&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;We are going write the Rock Paper Scissors game but in the blockchain, I eventually will
+like to really deploy it and add a nice UI on top of it.&lt;/p&gt;
+&lt;p&gt;The model we are going to use makes the first player commit to a play but without telling exactly the
+play by using a hash, then the second player plays, and finally the first player reveals and the “stake”
+or “bet” is distributed. There are also play deadlines and reveal deadlines to make the contract safe.&lt;/p&gt;
+&lt;p&gt;Here is a complete state diagram of our game model.
+The transitions are labeled with the &lt;code class=&quot;language-text&quot;&gt;Redeemer&lt;/code&gt; and its payload, constraints and checks.
+Constraints are common transaction constraints that Plutus provides abstractions for and
+checks are anything else developers might want to check to allow or not a given state transition.
+In our case we only use &lt;code class=&quot;language-text&quot;&gt;checks&lt;/code&gt; in the chase of &lt;code class=&quot;language-text&quot;&gt;Player1RevealWin&lt;/code&gt; and &lt;code class=&quot;language-text&quot;&gt;Player1RevealDraw&lt;/code&gt;, where
+we check that effectively it is a win or a draw for Player1.
+The state are composed of &lt;code class=&quot;language-text&quot;&gt;Datum&lt;/code&gt; which holds trivial data plus the staked / bet value.&lt;/p&gt;
+&lt;p&gt;&lt;span
+      class=&quot;gatsby-resp-image-wrapper&quot;
+      style=&quot;position: relative; display: block; margin-left: auto; margin-right: auto; max-width: 590px; &quot;
+    &gt;
+      &lt;a
+    class=&quot;gatsby-resp-image-link&quot;
+    href=&quot;/static/d90346e03181797b40d09b9e18171b09/98d66/states.jpg&quot;
+    style=&quot;display: block&quot;
+    target=&quot;_blank&quot;
+    rel=&quot;noopener&quot;
+  &gt;
+    &lt;span
+    class=&quot;gatsby-resp-image-background-image&quot;
+    style=&quot;padding-bottom: 131.0810810810811%; position: relative; bottom: 0; left: 0; background-image: url(&apos;data:image/jpeg;base64,/9j/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wgARCAAaABQDASIAAhEBAxEB/8QAFwABAQEBAAAAAAAAAAAAAAAAAAECBf/EABUBAQEAAAAAAAAAAAAAAAAAAAEA/9oADAMBAAIQAxAAAAHsSxNAMtFiq//EABQQAQAAAAAAAAAAAAAAAAAAADD/2gAIAQEAAQUCT//EABQRAQAAAAAAAAAAAAAAAAAAACD/2gAIAQMBAT8BH//EABQRAQAAAAAAAAAAAAAAAAAAACD/2gAIAQIBAT8BH//EABQQAQAAAAAAAAAAAAAAAAAAADD/2gAIAQEABj8CT//EABwQAAICAgMAAAAAAAAAAAAAAAABETEQIUFRsf/aAAgBAQABPyF9JlLbIPRTHEirY1TNQJQrwqx//9oADAMBAAIAAwAAABBAOjz/xAAWEQADAAAAAAAAAAAAAAAAAAAAEBH/2gAIAQMBAT8QdP/EABQRAQAAAAAAAAAAAAAAAAAAACD/2gAIAQIBAT8QH//EABsQAQADAQEBAQAAAAAAAAAAAAEAESExQRBR/9oACAEBAAE/EFa6KglG8BXWJlhxkWOhktT1AbPPydH17HAVEKc+n//Z&apos;); background-size: cover; display: block;&quot;
+  &gt;&lt;/span&gt;
+  &lt;img
+        class=&quot;gatsby-resp-image-image&quot;
+        alt=&quot;State transition function&quot;
+        title=&quot;State transition function&quot;
+        src=&quot;/static/d90346e03181797b40d09b9e18171b09/1c72d/states.jpg&quot;
+        srcset=&quot;/static/d90346e03181797b40d09b9e18171b09/a80bd/states.jpg 148w,
+/static/d90346e03181797b40d09b9e18171b09/1c91a/states.jpg 295w,
+/static/d90346e03181797b40d09b9e18171b09/1c72d/states.jpg 590w,
+/static/d90346e03181797b40d09b9e18171b09/a8a14/states.jpg 885w,
+/static/d90346e03181797b40d09b9e18171b09/fbd2c/states.jpg 1180w,
+/static/d90346e03181797b40d09b9e18171b09/98d66/states.jpg 1905w&quot;
+        sizes=&quot;(max-width: 590px) 100vw, 590px&quot;
+        style=&quot;width:100%;height:100%;margin:0;vertical-align:middle;position:absolute;top:0;left:0;&quot;
+        loading=&quot;lazy&quot;
+      /&gt;
+  &lt;/a&gt;
+    &lt;/span&gt;&lt;/p&gt;
+&lt;h2 id=&quot;on-chain-state-code-classlanguage-textdatumcode&quot; style=&quot;position:relative;&quot;&gt;On-chain state: &lt;code class=&quot;language-text&quot;&gt;Datum&lt;/code&gt;&lt;a href=&quot;#on-chain-state-code-classlanguage-textdatumcode&quot; aria-label=&quot;on chain state code classlanguage textdatumcode permalink&quot; class=&quot;header-anchor after&quot;&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;As we said before, the &lt;code class=&quot;language-text&quot;&gt;Datum&lt;/code&gt; will be a trivial piece of data we are going to store &lt;code class=&quot;language-text&quot;&gt;on-chain&lt;/code&gt;.
+In this particular case we are going to use it to store the current state of our state machine plus
+the choices made by players.&lt;/p&gt;
+&lt;p&gt;&lt;code class=&quot;language-text&quot;&gt;FinalState&lt;/code&gt; will contain no &lt;code class=&quot;language-text&quot;&gt;Datum&lt;/code&gt; and no &lt;code class=&quot;language-text&quot;&gt;value&lt;/code&gt; (coins and Native Tokens)&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;haskell&quot;&gt;&lt;pre class=&quot;language-haskell&quot;&gt;&lt;code class=&quot;language-haskell&quot;&gt;&lt;span class=&quot;token keyword&quot;&gt;data&lt;/span&gt; &lt;span class=&quot;token constant&quot;&gt;GameDatum&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;
+      &lt;span class=&quot;token comment&quot;&gt;-- at first we only store the hash of the player1&apos;s choice&lt;/span&gt;
+      &lt;span class=&quot;token constant&quot;&gt;State0&lt;/span&gt; &lt;span class=&quot;token constant&quot;&gt;ByteString&lt;/span&gt;
+      &lt;span class=&quot;token comment&quot;&gt;-- then we store the hash of the player1&apos;s choice plus the player2&apos;s choice&lt;/span&gt;
+    &lt;span class=&quot;token operator&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;token constant&quot;&gt;State1&lt;/span&gt; &lt;span class=&quot;token constant&quot;&gt;ByteString&lt;/span&gt;            &lt;span class=&quot;token constant&quot;&gt;GameChoice.GameChoice&lt;/span&gt;
+      &lt;span class=&quot;token comment&quot;&gt;-- when resolving draws we store both choices unhashed&lt;/span&gt;
+    &lt;span class=&quot;token operator&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;token constant&quot;&gt;State2&lt;/span&gt; &lt;span class=&quot;token constant&quot;&gt;GameChoice.GameChoice&lt;/span&gt; &lt;span class=&quot;token constant&quot;&gt;GameChoice.GameChoice&lt;/span&gt;
+      &lt;span class=&quot;token comment&quot;&gt;-- the final state stores nothing&lt;/span&gt;
+    &lt;span class=&quot;token operator&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;token constant&quot;&gt;StateFinal&lt;/span&gt;
+    &lt;span class=&quot;token keyword&quot;&gt;deriving&lt;/span&gt; &lt;span class=&quot;token constant&quot;&gt;Prelude.Show&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;&lt;a href=&quot;https://github.com/franleplant/plutus-pioneer-program-fork/blob/rock-paper-scissors/code/week07/src/RPS/GameDatum.hs&quot;&gt;GameDatum.hs&lt;/a&gt;&lt;/p&gt;
+&lt;h2 id=&quot;transaction-validator-input-code-classlanguage-textredeemercode&quot; style=&quot;position:relative;&quot;&gt;Transaction validator input: &lt;code class=&quot;language-text&quot;&gt;Redeemer&lt;/code&gt;&lt;a href=&quot;#transaction-validator-input-code-classlanguage-textredeemercode&quot; aria-label=&quot;transaction validator input code classlanguage textredeemercode permalink&quot; class=&quot;header-anchor after&quot;&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;haskell&quot;&gt;&lt;pre class=&quot;language-haskell&quot;&gt;&lt;code class=&quot;language-haskell&quot;&gt;&lt;span class=&quot;token keyword&quot;&gt;data&lt;/span&gt; &lt;span class=&quot;token constant&quot;&gt;GameRedeemer&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;
+        &lt;span class=&quot;token constant&quot;&gt;Player2Play&lt;/span&gt;       &lt;span class=&quot;token constant&quot;&gt;GameChoice.GameChoice&lt;/span&gt;
+      &lt;span class=&quot;token operator&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;token constant&quot;&gt;Player2NoRevealClaim&lt;/span&gt;
+      &lt;span class=&quot;token operator&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;token constant&quot;&gt;Player1RevealWin&lt;/span&gt;  &lt;span class=&quot;token constant&quot;&gt;ByteString&lt;/span&gt; &lt;span class=&quot;token constant&quot;&gt;GameChoice.GameChoice&lt;/span&gt;
+      &lt;span class=&quot;token operator&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;token constant&quot;&gt;Player1RevealDraw&lt;/span&gt; &lt;span class=&quot;token constant&quot;&gt;ByteString&lt;/span&gt; &lt;span class=&quot;token constant&quot;&gt;GameChoice.GameChoice&lt;/span&gt;
+      &lt;span class=&quot;token operator&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;token constant&quot;&gt;Player2ClaimDraw&lt;/span&gt;
+      &lt;span class=&quot;token operator&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;token constant&quot;&gt;Player1NoPlayClaim&lt;/span&gt;
+    &lt;span class=&quot;token keyword&quot;&gt;deriving&lt;/span&gt; &lt;span class=&quot;token constant&quot;&gt;Prelude.Show&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;These are the actions players can take to move the game state around.&lt;/p&gt;
+&lt;p&gt;&lt;a href=&quot;https://github.com/franleplant/plutus-pioneer-program-fork/blob/rock-paper-scissors/code/week07/src/RPS/GameRedeemer.hs&quot;&gt;GameRedeemer.hs&lt;/a&gt;&lt;/p&gt;
+&lt;h2 id=&quot;on-chain-validator-state-machine&quot; style=&quot;position:relative;&quot;&gt;On-chain validator: State Machine&lt;a href=&quot;#on-chain-validator-state-machine&quot; aria-label=&quot;on chain validator state machine permalink&quot; class=&quot;header-anchor after&quot;&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;This is the abstraction on top of a regular validator script that Plutus provides in order
+to model the common case of a State Machine.&lt;/p&gt;
+&lt;p&gt;We are only going to show one of the main happy paths, player 1 plays,
+then player 2 plays, finally player 1 reveals and win:&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;haskell&quot;&gt;&lt;pre class=&quot;language-haskell&quot;&gt;&lt;code class=&quot;language-haskell&quot;&gt;&lt;span class=&quot;token comment&quot;&gt;-- this are arms of a haskell&apos;s case and we are doing pattern matching.&lt;/span&gt;
+&lt;span class=&quot;token comment&quot;&gt;-- (State0, Player2Play) -&gt; State1&lt;/span&gt;
+&lt;span class=&quot;token comment&quot;&gt;-- this represents the valid transition from State0 where Player1&lt;/span&gt;
+&lt;span class=&quot;token comment&quot;&gt;-- played in secret to State1 where Player2 played (not secretly)&lt;/span&gt;
+&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token constant&quot;&gt;State0&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;player1ChoiceHash&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;token constant&quot;&gt;GameRedeemer.Player2Play&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;player2Choice&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;staked&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;token comment&quot;&gt;-- each player needs to stake in order to play&lt;/span&gt;
+  &lt;span class=&quot;token comment&quot;&gt;-- this validates that State0 has 1xStake&lt;/span&gt;
+  &lt;span class=&quot;token operator&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;lovelaces&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;staked&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;Game.stake&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;game&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;-&gt;&lt;/span&gt;
+      &lt;span class=&quot;token keyword&quot;&gt;let&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;constraints&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;Constraints.mustBeSignedBy&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token hvariable&quot;&gt;Game.player2&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;game&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;&amp;lt;&gt;&lt;/span&gt;
+                        &lt;span class=&quot;token hvariable&quot;&gt;Constraints.mustValidateIn&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token hvariable&quot;&gt;to&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;Game.playDeadline&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;game&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;
+          &lt;span class=&quot;token hvariable&quot;&gt;datum&lt;/span&gt;       &lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;token constant&quot;&gt;State1&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;player1ChoiceHash&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;player2Choice&lt;/span&gt;
+          &lt;span class=&quot;token hvariable&quot;&gt;stake&lt;/span&gt;       &lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token hvariable&quot;&gt;lovelaceValueOf&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;token number&quot;&gt;2&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;Game.stake&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;game&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;
+      &lt;span class=&quot;token comment&quot;&gt;-- we return the next state: State1 (plus its payload)&lt;/span&gt;
+      &lt;span class=&quot;token keyword&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;token constant&quot;&gt;Just&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token hvariable&quot;&gt;constraints&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;token constant&quot;&gt;State&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;datum&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;stake&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;
+
+
+&lt;span class=&quot;token comment&quot;&gt;-- (State1, Player1RevealWin) -&gt; StateFinal&lt;/span&gt;
+&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token constant&quot;&gt;State1&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;_&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;_&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;token constant&quot;&gt;GameRedeemer.Player1RevealWin&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;_&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;_&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;staked&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;token comment&quot;&gt;-- since both player played at this stage, the amount&lt;/span&gt;
+  &lt;span class=&quot;token comment&quot;&gt;-- of coins staked should be 2x stake&lt;/span&gt;
+  &lt;span class=&quot;token operator&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;lovelaces&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;staked&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token number&quot;&gt;2&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;Game.stake&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;game&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;-&gt;&lt;/span&gt;
+      &lt;span class=&quot;token keyword&quot;&gt;let&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;constraints&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;Constraints.mustBeSignedBy&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token hvariable&quot;&gt;Game.player1&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;game&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;&amp;lt;&gt;&lt;/span&gt;
+                        &lt;span class=&quot;token hvariable&quot;&gt;Constraints.mustValidateIn&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token hvariable&quot;&gt;to&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;Game.revealDeadline&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;game&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;&amp;lt;&gt;&lt;/span&gt;
+                        &lt;span class=&quot;token hvariable&quot;&gt;Constraints.mustPayToPubKey&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token hvariable&quot;&gt;Game.player1&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;game&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token hvariable&quot;&gt;lovelaceValueOf&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;token number&quot;&gt;2&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;Game.stake&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;game&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;
+      &lt;span class=&quot;token comment&quot;&gt;-- we return the next state: StateFinal&lt;/span&gt;
+      &lt;span class=&quot;token keyword&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;token constant&quot;&gt;Just&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token hvariable&quot;&gt;constraints&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;token constant&quot;&gt;State&lt;/span&gt; &lt;span class=&quot;token constant&quot;&gt;StateFinal&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;mempty&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;&lt;a href=&quot;https://github.com/franleplant/plutus-pioneer-program-fork/blob/rock-paper-scissors/code/week07/src/RPS/Validator.hs&quot;&gt;Validator.hs&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;code class=&quot;language-text&quot;&gt;constraints&lt;/code&gt; are a Plutus primitive that lets you express checks for the incoming transaction,
+have in mind that this validator runs whenever some trivial address is trying to consume one of its
+UTxOs, so in order to spend a UTxO the validator needs to agree with said action.&lt;/p&gt;
+&lt;p&gt;In this case we are only allowing this particular state change to happen if the transaction
+trying to be applied is signed by Player2 and it is done before the &lt;code class=&quot;language-text&quot;&gt;playDeadline&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;We return the next State defined in &lt;code class=&quot;language-text&quot;&gt;datum&lt;/code&gt; and we duplicate the &lt;code class=&quot;language-text&quot;&gt;stake&lt;/code&gt; amount of Ada
+because Player2 needs to &lt;code class=&quot;language-text&quot;&gt;stake&lt;/code&gt; or &lt;code class=&quot;language-text&quot;&gt;bet&lt;/code&gt; in order to participate.&lt;/p&gt;
+&lt;p&gt;Additional checks can be done by implementing a &lt;code class=&quot;language-text&quot;&gt;check&lt;/code&gt; function, here is an
+example of how we use it to add an extra check to the &lt;code class=&quot;language-text&quot;&gt;Player1RevealWin&lt;/code&gt; transition.
+We simply check that the revealed choice that Player1 made actually wins Player2’s:&lt;/p&gt;
+&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;haskell&quot;&gt;&lt;pre class=&quot;language-haskell&quot;&gt;&lt;code class=&quot;language-haskell&quot;&gt;&lt;span class=&quot;token hvariable&quot;&gt;check&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token constant&quot;&gt;State1&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;player1ChoiceHash&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;player2Choice&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token constant&quot;&gt;Player1RevealWin&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;nonce&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;player1Choice&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;_&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;
+    &lt;span class=&quot;token hvariable&quot;&gt;traceIfFalse&lt;/span&gt; &lt;span class=&quot;token string&quot;&gt;&quot;player1 should reveal the original choice&quot;&lt;/span&gt;
+      &lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token hvariable&quot;&gt;player1ChoiceHash&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;presentedPlayer1ChoiceHash&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt;
+    &lt;span class=&quot;token hvariable&quot;&gt;traceIfFalse&lt;/span&gt; &lt;span class=&quot;token string&quot;&gt;&quot;player1 beats player2&quot;&lt;/span&gt;
+      &lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token hvariable&quot;&gt;GameChoice.beats&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;player1Choice&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;player2Choice&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;token keyword&quot;&gt;where&lt;/span&gt;
+            &lt;span class=&quot;token hvariable&quot;&gt;player1ChoiceString&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;token constant&quot;&gt;ByteString&lt;/span&gt;
+            &lt;span class=&quot;token hvariable&quot;&gt;player1ChoiceString&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;player1Choice&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;of&lt;/span&gt;
+                &lt;span class=&quot;token constant&quot;&gt;GameChoice.Rock&lt;/span&gt;     &lt;span class=&quot;token operator&quot;&gt;-&gt;&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;rock&lt;/span&gt;
+                &lt;span class=&quot;token constant&quot;&gt;GameChoice.Paper&lt;/span&gt;    &lt;span class=&quot;token operator&quot;&gt;-&gt;&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;paper&lt;/span&gt;
+                &lt;span class=&quot;token constant&quot;&gt;GameChoice.Scissors&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;-&gt;&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;scissors&lt;/span&gt;
+
+            &lt;span class=&quot;token hvariable&quot;&gt;presentedPlayer1ChoiceHash&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;token constant&quot;&gt;ByteString&lt;/span&gt;
+            &lt;span class=&quot;token hvariable&quot;&gt;presentedPlayer1ChoiceHash&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;  &lt;span class=&quot;token hvariable&quot;&gt;choiceHash&lt;/span&gt;
+                &lt;span class=&quot;token keyword&quot;&gt;where&lt;/span&gt;
+                    &lt;span class=&quot;token hvariable&quot;&gt;choiceHash&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;sha2_256&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token hvariable&quot;&gt;nonce&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;`concatenate`&lt;/span&gt; &lt;span class=&quot;token hvariable&quot;&gt;player1ChoiceString&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Note: I’ve omitted some details for clarity, check the &lt;a href=&quot;https://github.com/franleplant/plutus-pioneer-program-fork/blob/rock-paper-scissors/code/week07/src/RPS/Validator.hs&quot;&gt;full code&lt;/a&gt;&lt;/p&gt;
+&lt;h2 id=&quot;off-chain-code&quot; style=&quot;position:relative;&quot;&gt;Off-chain code&lt;a href=&quot;#off-chain-code&quot; aria-label=&quot;off chain code permalink&quot; class=&quot;header-anchor after&quot;&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Plutus is heavy on the Off-chain code, but it is safe to do so because the important constraints should
+always be implemented on the &lt;code class=&quot;language-text&quot;&gt;validators&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;The off-chain code, also written in Haskell and that will be later allowed to be run in the browser simply
+allows two users to play this game. The first player &lt;em&gt;instantiates&lt;/em&gt; the contract by playing secretly and
+adding a stake.&lt;/p&gt;
+&lt;p&gt;Player2 plays by finding an open game and playing and staking.&lt;/p&gt;
+&lt;p&gt;When the deadlines are passed a winner is decided and the reward (staked) is claimed.&lt;/p&gt;
+&lt;p&gt;Nothing illegal should be allowed to happen because our on-chain code (validator) should only allow
+certain valid transactions to happen and nothing else.&lt;/p&gt;
+&lt;p&gt;&lt;a href=&quot;https://github.com/franleplant/plutus-pioneer-program-fork/blob/rock-paper-scissors/code/week07/src/RPS.hs&quot;&gt;off chain code&lt;/a&gt;&lt;/p&gt;
+&lt;h2 id=&quot;outro&quot; style=&quot;position:relative;&quot;&gt;Outro&lt;a href=&quot;#outro&quot; aria-label=&quot;outro permalink&quot; class=&quot;header-anchor after&quot;&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;a href=&quot;https://github.com/franleplant/plutus-pioneer-program-fork/tree/rock-paper-scissors/code/week07/src&quot;&gt;Check the full code here&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;Cardano and Plutus are really fun and interesting and there is a lot of things coming their way
+that make me super excited about.&lt;/p&gt;
+&lt;p&gt;I’m anxious about actually deploying this dummy game to the main net and add a nice UI on top of it.&lt;/p&gt;</content:encoded></item></channel></rss>
