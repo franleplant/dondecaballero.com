@@ -145,6 +145,14 @@ module.exports = {
     //},
     `gatsby-plugin-twitter`,
     "gatsby-plugin-postcss",
+    {
+      resolve: 'gatsby-plugin-web-font-loader',
+      options: {
+        google: {
+          families: ['Fjalla One', 'Montserrat']
+        }
+      }
+    }
   ],
   mapping: {
     "MarkdownRemark.frontmatter.author": `AuthorYaml`,

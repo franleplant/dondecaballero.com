@@ -16,20 +16,20 @@
   h5,
   h1 {
     @apply text-4xl;
-    @apply font-sans;
+    @apply font-title;
     @apply font-bold;
     @apply pb-2;
     @apply text-black;
   }
   h2 {
     @apply text-2xl;
-    @apply font-sans;
+    @apply font-title;
     @apply font-bold;
     @apply pb-2;
   }
   h3 {
     @apply text-xl;
-    @apply font-sans;
+    @apply font-title;
     @apply font-bold;
     @apply pb-2;
   }
